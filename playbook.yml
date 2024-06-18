@@ -1,0 +1,60 @@
+---
+- name: Deploy Flask App and Certificates
+  hosts: your_target_hosts
+  become: yes
+  tasks:
+    # Task 1: Deploy standard CA certificates
+    - name: Deploy standard CA certificates
+      copy:
+        src: files/standard_ca_certificates/*.crt
+        dest: /etc/ssl/certs/
+
+    # Task 2: Deploy custom CA certificates
+    - name: Deploy custom CA certificates
+      copy:
+        src: files/{{ item }}
+        dest: /etc/pki/ca-trust/source/anchors/
+        mode: 0644
+      with_items:
+        - CA1.crt
+        - CA2.crt
+        - CA3.crt
+
+    # Task 3: Deploy Python Flask application
+    - name: Create deployment directory
+      file:
+        path: /opt/example
+        state: directory
+
+    - name: Copy wheel file
+      copy:
+        src: files/Example-1.1.1-py3-none-any.whl
+        dest: /opt/example/Example-1.1.1-py3-none-any.whl
+        mode: 0644
+
+    - name: Create virtual environment
+      command: python3 -m venv /opt/example/venv
+
+    - name: Install Flask application
+      pip:
+        virtualenv: /opt/example/venv
+        name: /opt/example/Example-1.1.1-py3-none-any.whl
+
+    # Task 4: Copy config.py and run.sh
+    - name: Copy config.py
+      copy:
+        src: files/config.py
+        dest: /opt/example/config.py
+        mode: 0644
+
+    - name: Copy run.sh
+      copy:
+        src: files/run.sh
+        dest: /opt/example/run.sh
+        mode: 0755
+
+    # Task 5: Create systemd service
+    - name: Create systemd service
+      template:
+        src: templates/example.service.j2
+        dest: /etc/systemd/system/example.service
